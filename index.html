@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Options Evaluator</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .result-section {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>Options Evaluator</h1>
+        <div class="input-group">
+            <label>Ticker: <input v-model="ticker" placeholder="e.g., TSLA"></label>
+        </div>
+        <div class="input-group">
+            <label>Minimum Days: <input v-model.number="min_days" type="number" placeholder="e.g., 5"></label>
+        </div>
+        <div class="input-group">
+            <label>Minimum Volume: <input v-model.number="min_volume" type="number" placeholder="e.g., 100"></label>
+        </div>
+        <div class="input-group">
+            <label>Minimum Open Interest: <input v-model.number="min_open_interest" type="number" placeholder="e.g., 100"></label>
+        </div>
+        <div class="input-group">
+            <label>Maximum Theoretical Price: <input v-model.number="max_theoretical_price" type="number" placeholder="e.g., 2.0"></label>
+        </div>
+        <button @click="fetchData" :disabled="loading">Fetch Data</button>
+        <div v-if="loading">Loading...</div>
+        <div v-else-if="responseData" class="result-section">
+            <h2>Calculation Summary</h2>
+            <p>Annualized Volatility: {{ responseData.cal_summary.annualized_volatility.toFixed(4) }}</p>
+            <p>Risk-Free Rate: {{ responseData.cal_summary.risk_free_rate.toFixed(4) }}</p>
+            <p>Stock Price: {{ responseData.cal_summary.stock_price.toFixed(2) }}</p>
+            
+            <h2>Call Option</h2>
+            <p>Description: {{ responseData.call.desc }}</p>
+            <p>Expiration: {{ responseData.call.expiration }}</p>
+            <p>Strike: {{ responseData.call.strike.toFixed(2) }}</p>
+            <p>Bid: {{ responseData.call.bid.toFixed(2) }}</p>
+            <p>Ask: {{ responseData.call.ask.toFixed(2) }}</p>
+            <p>Last Price: {{ responseData.call.last.toFixed(2) }}</p>
+            <p>Theoretical Price: {{ responseData.call.theoretical_price.toFixed(4) }}</p>
+            
+            <h2>Put Option</h2>
+            <p>Description: {{ responseData.put.desc }}</p>
+            <p>Expiration: {{ responseData.put.expiration }}</p>
+            <p>Strike: {{ responseData.put.strike.toFixed(2) }}</p>
+            <p>Bid: {{ responseData.put.bid.toFixed(2) }}</p>
+            <p>Ask: {{ responseData.put.ask.toFixed(2) }}</p>
+            <p>Last Price: {{ responseData.put.last.toFixed(2) }}</p>
+            <p>Theoretical Price: {{ responseData.put.theoretical_price.toFixed(4) }}</p>
+        </div>
+        <div v-else>
+            <p>Please enter parameters and click "Fetch Data" to view results.</p>
+        </div>
+        <div v-if="error" class="error">{{ error }}</div>
+    </div>
+    
+    <script>
+        const { createApp } = Vue
+        createApp({
+            data() {
+                return {
+                    ticker: 'TSLA',
+                    min_days: 5,
+                    min_volume: 100,
+                    min_open_interest: 100,
+                    max_theoretical_price: 2.0,
+                    responseData: null,
+                    loading: false,
+                    error: null
+                }
+            },
+            methods: {
+                fetchData() {
+                    this.loading = true;
+                    this.error = null;
+                    const url = 'https://option-eval-backend-production-7954.up.railway.app/api/options';
+                    const data = {
+                        ticker: this.ticker,
+                        min_days: this.min_days,
+                        min_volume: this.min_volume,
+                        min_open_interest: this.min_open_interest,
+                        max_theoretical_price: this.max_theoretical_price
+                    };
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        this.responseData = data;
+                        this.loading = false;
+                    })
+                    .catch(error => {
+                        this.error = 'Error: ' + error.message;
+                        this.loading = false;
+                    });
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>
